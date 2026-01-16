@@ -1,9 +1,14 @@
 package main
 
+// So far just initalized with the standard Bubbletea frame
+// Added functionalities with my Noob Knowledge
+// #HumbleKing
+
 import (
 	"bufio"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/textarea"
@@ -30,8 +35,9 @@ type model struct {
 func initialModel(input []string) model {
 	ta := textarea.New()
 	ta.Placeholder = "Input: "
+	list := slices.Concat(input, ReadingPreviousList())
 	return model{
-		choices:  input,
+		choices:  list,
 		textarea: ta,
 		selected: make(map[int]struct{}),
 	}
@@ -118,6 +124,7 @@ func Appending() []string {
 	return inputs
 }
 
+// Formats the List in to the String which is used for the MD File
 func FileFormating(list []string) string {
 	// more efficient
 	var s strings.Builder
@@ -126,4 +133,15 @@ func FileFormating(list []string) string {
 		s.WriteString("\n" + item)
 	}
 	return s.String()
+}
+
+// It reads from already created MD File and returns items except for "List:"
+func ReadingPreviousList() []string {
+	body, err := os.ReadFile("Hello.md")
+	if err != nil {
+		fmt.Printf("A Failure wee oo wee oo %v", err)
+	}
+	var rendered []string
+	rendered = strings.Split(string(body), "\n")
+	return rendered[1:]
 }
