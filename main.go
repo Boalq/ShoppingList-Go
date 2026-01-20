@@ -25,7 +25,7 @@ func main() {
 type model struct {
 	choices   []string         //items on the to-do lists
 	cursor    int              //where the cursor pointing at
-	selected  map[int]struct{} //which items are selected
+	selected  map[int]struct{} //which items are selectedss
 	append    bool             //Append screen or not
 	textinput textinput.Model  //Live User Input to add Items
 }
@@ -39,10 +39,12 @@ func initialModel() model {
 
 	var list []string
 	list = ReadingPreviousList()
+	selected := make(map[int]struct{})
+
 	return model{
 		choices:   list,
 		textinput: ti,
-		selected:  make(map[int]struct{}),
+		selected:  selected,
 	}
 }
 
@@ -58,7 +60,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			switch msg.String() {
 			case "ctrl+c", "q":
 				f, _ := os.Create("List.md")
-				f.WriteString(FileFormating(m.choices))
+				f.WriteString(FileFormating(m, m.choices))
 				return m, tea.Quit
 			case "a":
 				m.append = true // Goes in to Append mode
@@ -80,6 +82,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "d":
 				m.choices = slices.Delete(m.choices, int(m.cursor), int(m.cursor)+1) // Deleting current selected Choice
 			}
+
 		} else {
 			switch msg.String() {
 			case "ctrl+l":
@@ -126,23 +129,38 @@ func (m model) View() string {
 }
 
 // Formats the List in to the String which is used for the MD File
-func FileFormating(list []string) string {
+func FileFormating(m model, list []string) string {
 	// more efficient
 	var s strings.Builder
 	s.WriteString("List:")
-	for _, item := range list {
-		s.WriteString("\n" + item)
+	// Deciding if the Item is selected or not
+	for i, item := range list {
+		if _, ok := m.selected[i]; ok {
+			s.WriteString("\nx " + item)
+		} else {
+			s.WriteString("\n" + item)
+		}
 	}
 	return s.String()
 }
 
 // It reads from already created MD File and returns items except for "List:"
 func ReadingPreviousList() []string {
-	body, err := os.ReadFile("List.md")
-	if err != nil {
-		fmt.Printf("A Failure wee oo wee oo %v", err)
+	_, err := os.ReadFile("List.md")
+	if os.IsExist(err) {
+		body, _ := os.ReadFile("List.md")
+		var rendered []string
+		rendered = strings.Split(string(body), "\n")
+		if len(rendered) != 0 {
+			// Removing the Notation of complete
+			for i, word := range rendered {
+				if string(word[0]) == "x" && string(word[1]) == " " {
+					rendered[i] = rendered[i][2:]
+				}
+			}
+		}
+
+		return rendered[1:]
 	}
-	var rendered []string
-	rendered = strings.Split(string(body), "\n")
-	return rendered[1:]
+	return nil
 }
